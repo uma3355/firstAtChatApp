@@ -107,6 +107,35 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Get all users endpoint
+router.get('/users', async (req, res) => {
+  try {
+    // Find all users and exclude sensitive information like password
+    const users = await User.find({}, {
+      password: 0, // Exclude password field
+      __v: 0 // Exclude version field
+    });
+
+    res.json({
+      success: true,
+      users: users.map(user => ({
+        id: user._id,
+        username: user.username,
+        display_name: user.display_name,
+        last_active: user.last_active,
+        created_at: user.created_at
+      }))
+    });
+
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // Helper function to get WebSocket connection for a user
 function getUserConnection(userId) {
   return activeConnections.get(userId);

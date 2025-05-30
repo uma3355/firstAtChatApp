@@ -56,7 +56,14 @@ const messageHandlers = {
 
       // Send confirmation to sender
       ws.send(JSON.stringify({
-        ...messageData,
+        type: 'status',
+        conversation_id: conversation._id,
+        message: {
+          id: message._id,
+          sender_id: message.sender_id,
+          content: message.content,
+          timestamp: message.timestamp
+        },
         status: 'sent'
       }));
 
@@ -73,27 +80,32 @@ const messageHandlers = {
 // Setup WebSocket server
 function setupWebSocketHandlers(wss) {
   wss.on('connection', (ws) => {
-    console.log('New WebSocket connection established');
+    console.log('New WebSocket connection attempt');
 
     // Handle initial connection setup
     ws.on('message', async (message) => {
+      console.log('Raw message received:', message.toString());
       try {
         const data = JSON.parse(message);
-        console.log('Received WebSocket message:', data);
+        console.log('Parsed WebSocket message:', data);
 
         // Only handle connection setup if it's the first message with user_id
         if (data.type === 'init' && data.user_id && !ws.userId) {
+          console.log('Processing init message for user:', data.user_id);
           ws.userId = data.user_id;
           activeConnections.set(data.user_id, ws);
+          console.log('Active connections after adding:', Array.from(activeConnections.keys()));
 
           // Get all conversations for the user
           const conversations = await Conversation.find({
             participants: { $in: [data.user_id] }
           });
+          console.log('Found conversations:', conversations.length);
 
           // For each conversation, get undelivered messages
           for (const conversation of conversations) {
             const undeliveredMessages = await conversation.getUndeliveredMessages(data.user_id);
+            console.log('Undelivered messages for conversation:', conversation._id, ':', undeliveredMessages.length);
             
             if (undeliveredMessages.length > 0) {
               // Send undelivered messages to the user
@@ -115,6 +127,7 @@ function setupWebSocketHandlers(wss) {
         // Route the message to the appropriate handler
         const handler = messageHandlers[data.type];
         if (handler) {
+          console.log('Found handler for message type:', data.type);
           await handler(ws, data, wss);
         } else {
           console.log('Unknown message type:', data.type);
@@ -129,6 +142,7 @@ function setupWebSocketHandlers(wss) {
     });
 
     ws.on('close', async () => {
+      console.log('WebSocket connection closing');
       if (ws.userId) {
         try {
           const user = await User.findById(ws.userId);
@@ -136,11 +150,15 @@ function setupWebSocketHandlers(wss) {
             await user.updateLastActive();
           }
           activeConnections.delete(ws.userId);
-          console.log(`Client ${ws.userId} disconnected`);
+          console.log(`Client ${ws.userId} disconnected. Active connections:`, Array.from(activeConnections.keys()));
         } catch (error) {
           console.error('Error handling disconnect:', error);
         }
       }
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
     });
   });
 }
