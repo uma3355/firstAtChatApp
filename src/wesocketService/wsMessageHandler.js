@@ -28,7 +28,8 @@ const messageHandlers = {
       const message = await Message.create({
         conversation_id: conversation._id,
         sender_id: sender_id,
-        content: content
+        content: content,
+        read_by: [sender_id]
       });
 
       // Update conversation's last message
@@ -37,6 +38,7 @@ const messageHandlers = {
       const messageData = {
         type: 'message',
         conversation_id: conversation._id,
+        participants:[sender_id, recipient_id],
         message: {
           id: message._id,
           sender_id: message.sender_id,
@@ -44,7 +46,7 @@ const messageHandlers = {
           timestamp: message.timestamp
         }
       };
-
+      let messageStatus = 'sent'
       // Send message to recipient if online
       const recipientWs = activeConnections.get(recipient_id);
       if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
@@ -52,6 +54,7 @@ const messageHandlers = {
         //once it sends the message then update the last_delivered of the recipientId in conversation
         await conversation.last_delivered.set(recipient_id, new Date());
         await conversation.save();
+        messageStatus = 'delivered'
       }
 
       // Send confirmation to sender
@@ -64,7 +67,7 @@ const messageHandlers = {
           content: message.content,
           timestamp: message.timestamp
         },
-        status: 'sent'
+        status: messageStatus
       }));
 
     } catch (error) {
@@ -81,6 +84,7 @@ const messageHandlers = {
 function setupWebSocketHandlers(wss) {
   wss.on('connection', (ws) => {
     console.log('New WebSocket connection attempt');
+    //when i am making the connection from teh front
 
     // Handle initial connection setup
     ws.on('message', async (message) => {

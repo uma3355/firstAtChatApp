@@ -5,13 +5,19 @@ const WebSocket = require('ws');
 const path = require('path');
 const { connectToDatabase, closeDatabase } = require('./wesocketService/db/mongodb');
 const { router: userRoutes } = require('./wesocketService/routes/userRoutes');
+const { router: conversationRoutes } = require('./wesocketService/routes/conversationRoutes');
 const { setupWebSocketHandlers } = require('./wesocketService/wsMessageHandler');
-
+const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ 
   server
 });
+app.use(cors({
+  origin: 'http://localhost:8082',
+  credentials: true, // if you're using cookies or auth headers
+}));
+
 const PORT = process.env.PORT
 // Middleware
 app.use(express.json());
@@ -19,6 +25,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use('/api/conversations', conversationRoutes);
 
 // Setup WebSocket handlers
 setupWebSocketHandlers(wss);

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const uri = process.env.MONGODB_URI || 'mongodb+srv://kmahesh3355:root@cluster0.kborkna.mongodb.net/';
+const uri = process.env.MONGODB_URI || 'mongodb://kmahesh3355:root@localhost:27017/';
 
 async function connectToDatabase() {
   try {
