@@ -14,7 +14,7 @@ const wss = new WebSocket.Server({
   server
 });
 app.use(cors({
-  origin: 'http://localhost:8082',
+  origin: 'https://secret-sweetheart-toast.vercel.app',
   credentials: true, // if you're using cookies or auth headers
 }));
 
